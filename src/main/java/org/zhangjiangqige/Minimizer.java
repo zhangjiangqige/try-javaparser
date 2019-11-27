@@ -29,8 +29,6 @@ public class Minimizer {
         Path root = Paths.get(dir);
 
         ParserConfiguration conf = new ParserConfiguration();
-        // This removes all comments, by not parsing them at all
-        conf.setAttributeComments(false);
         MinimizationVisitor sm = new MinimizationVisitor();
 
         ProjectRoot projectRoot = new ParserCollectionStrategy().collect(root);
@@ -44,6 +42,8 @@ public class Minimizer {
                         Optional<CompilationUnit> opt = result.getResult();
                         if (opt.isPresent()) {
                             CompilationUnit cu = opt.get();
+                            // this somehow only removes comments except the first one, and copyright headers are kept
+                            cu.getComments().forEach(Node::remove);
                             sm.visit(cu, null);
                             if (cu.findAll(ClassOrInterfaceDeclaration.class).isEmpty()
                                     && cu.findAll(AnnotationDeclaration.class).isEmpty()
