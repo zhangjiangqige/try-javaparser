@@ -13,6 +13,7 @@ import com.github.javaparser.utils.ParserCollectionStrategy;
 import com.github.javaparser.utils.ProjectRoot;
 import com.github.javaparser.utils.SourceRoot;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,13 +39,21 @@ public class Minimizer {
                 sourceRoot.parse("", conf, new SourceRoot.Callback() {
                     @Override
                     public Result process(Path localPath, Path absolutePath, ParseResult<CompilationUnit> result) {
+                        Result res = Result.SAVE;
                         System.out.printf("Minimizing %s%n", absolutePath);
                         Optional<CompilationUnit> opt = result.getResult();
                         if (opt.isPresent()) {
                             CompilationUnit cu = opt.get();
                             sm.visit(cu, null);
+                            if (cu.findAll(ClassOrInterfaceDeclaration.class).isEmpty()
+                                    && cu.findAll(AnnotationDeclaration.class).isEmpty()
+                                    && cu.findAll(EnumDeclaration.class).isEmpty()) {
+                                // all content is removed, should delete this file
+                                new File(absolutePath.toUri()).delete();
+                                res = Result.DONT_SAVE;
+                            }
                         }
-                        return Result.SAVE;
+                        return res;
                     }
                 });
             } catch (IOException e) {
@@ -59,6 +68,13 @@ public class Minimizer {
             super.visit(cid, arg);
             removeIfPrivateOrPkgPrivate(cid);
             return cid;
+        }
+
+        @Override
+        public EnumDeclaration visit(EnumDeclaration ed, Void arg) {
+            super.visit(ed, arg);
+            removeIfPrivateOrPkgPrivate(ed);
+            return ed;
         }
 
         @Override
